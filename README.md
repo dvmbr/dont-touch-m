@@ -6,10 +6,14 @@ Don't touch M.
 
 The unclickable button.
 
+## #002
+
+Don't scroll M.
+
 ## Tech
 
-- Java 21
-- Spring Boot 4.1.1
-- Spring MVC
-- JSP
-- Gradle
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- pnpm
