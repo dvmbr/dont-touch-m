@@ -1,13 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import Toast from "@/client/components/Toast";
-
-type ToastState = {
-  message: string;
-  x: number;
-  y: number;
-};
+import { useEffect, useRef } from "react";
+import DontTouchM, {
+  type DontTouchMHandle,
+} from "@/client/components/DontTouchM";
 
 // Decide how close the cursor can get before M escapes.
 // 99.9%: escape when the cursor gets within 5–12px.
@@ -23,8 +19,8 @@ function getEscapeDistance() {
 }
 
 export default function UnclickableButton() {
-  // Reference to the actual M button element.
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  // Reference to the shared M component.
+  const mRef = useRef<DontTouchMHandle>(null);
 
   // Keep M still until the first successful click.
   const firstAttemptRef = useRef(true);
@@ -32,22 +28,13 @@ export default function UnclickableButton() {
   // Current distance that triggers M to escape.
   const escapeDistanceRef = useRef(12);
 
-  // Current toast displayed on the screen.
-  const [toast, setToast] = useState<ToastState | null>(null);
-
-  // Remove the current toast.
-  const closeToast = useCallback(() => {
-    setToast(null);
-  }, []);
-
   // Move M to a random position inside the viewport.
   const moveM = () => {
-    const button = buttonRef.current;
+    const m = mRef.current?.element;
 
-    if (!button) return;
+    if (!m) return;
 
-    // Get the current size of M before calculating its next position.
-    const rect = button.getBoundingClientRect();
+    const rect = m.getBoundingClientRect();
 
     // Keep M slightly away from the viewport edges.
     const edgePadding = 20;
@@ -56,43 +43,38 @@ export default function UnclickableButton() {
 
     const maxY = window.innerHeight - rect.height - edgePadding;
 
-    // Pick a random position that keeps the entire M inside the viewport.
+    // Pick a random position that keeps M inside the viewport.
     const x = edgePadding + Math.random() * Math.max(0, maxX - edgePadding);
 
     const y = edgePadding + Math.random() * Math.max(0, maxY - edgePadding);
 
-    // Detach M from "Don't touch M" and move it around the viewport.
-    button.style.position = "fixed";
-    button.style.left = `${x}px`;
-    button.style.top = `${y}px`;
+    // Detach M from the sentence and move it around the viewport.
+    m.style.position = "fixed";
+    m.style.left = `${x}px`;
+    m.style.top = `${y}px`;
 
-    // Randomize the escape distance after every escape.
+    // Randomize the next escape distance.
     escapeDistanceRef.current = getEscapeDistance();
   };
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    // First click: surprise the user and start the escape behavior.
+  const getClickMessage = () => {
+    // The first successful click gets its own reaction.
+    if (firstAttemptRef.current) {
+      return "Wait, you actually touched M?!";
+    }
+
+    // Reaching M again after it starts escaping is extremely rare.
+    return "You actually caught M!";
+  };
+
+  const handleClick = () => {
+    // First click activates the escape behavior.
     if (firstAttemptRef.current) {
       firstAttemptRef.current = false;
 
-      // Show the first surprise toast where M was clicked.
-      setToast({
-        message: "Wait, you actually touched M?!",
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      // M immediately escapes after the first successful click.
       moveM();
       return;
     }
-
-    // Rare successful click after M has started escaping.
-    setToast({
-      message: "You actually caught M!",
-      x: event.clientX,
-      y: event.clientY,
-    });
 
     // Escape again immediately after being caught.
     moveM();
@@ -106,12 +88,11 @@ export default function UnclickableButton() {
       // M must remain completely still before the first click.
       if (firstAttemptRef.current) return;
 
-      const button = buttonRef.current;
+      const m = mRef.current?.element;
 
-      if (!button) return;
+      if (!m) return;
 
-      // Get M's current position and size.
-      const rect = button.getBoundingClientRect();
+      const rect = m.getBoundingClientRect();
 
       // Find the closest point on M to the cursor.
       const closestX = Math.max(rect.left, Math.min(event.clientX, rect.right));
@@ -124,14 +105,14 @@ export default function UnclickableButton() {
         event.clientY - closestY,
       );
 
-      // Do nothing while the cursor is still far enough away.
-      if (distance > escapeDistanceRef.current) return;
+      if (distance > escapeDistanceRef.current) {
+        return;
+      }
 
       // Escape as soon as the cursor crosses the current threshold.
       moveM();
     };
 
-    // Track cursor movement across the entire viewport.
     window.addEventListener("mousemove", handleMouseMove);
 
     return () => {
@@ -143,24 +124,12 @@ export default function UnclickableButton() {
     <main className="flex min-h-screen items-center justify-center">
       <h1 className="select-none text-2xl font-bold">
         Don't touch{" "}
-        <button
-          ref={buttonRef}
-          type="button"
+        <DontTouchM
+          ref={mRef}
+          getClickMessage={getClickMessage}
           onClick={handleClick}
-          className="cursor-pointer select-none border-0 bg-transparent p-0 text-[12rem] font-black leading-none"
-        >
-          M
-        </button>
-      </h1>
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          x={toast.x}
-          y={toast.y}
-          onClose={closeToast}
         />
-      )}
+      </h1>
     </main>
   );
 }

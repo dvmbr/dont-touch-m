@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ToastProps = {
   message: string;
@@ -17,8 +17,51 @@ export default function Toast({
   duration = 700,
   onClose,
 }: ToastProps) {
+  // Reference used to measure the rendered toast.
+  const toastRef = useRef<HTMLDivElement>(null);
+
   // Controls the fade-out animation.
   const [visible, setVisible] = useState(true);
+
+  // Final position after keeping the toast inside the viewport.
+  const [position, setPosition] = useState({
+    x,
+    y,
+  });
+
+  useEffect(() => {
+    const toast = toastRef.current;
+
+    if (!toast) return;
+
+    const rect = toast.getBoundingClientRect();
+
+    const edgePadding = 12;
+    const cursorOffset = 12;
+
+    let nextX = x + cursorOffset;
+    let nextY = y + cursorOffset;
+
+    // Flip the toast to the left when it would overflow right.
+    if (nextX + rect.width > window.innerWidth - edgePadding) {
+      nextX = x - rect.width - cursorOffset;
+    }
+
+    // Flip the toast upward when it would overflow bottom.
+    if (nextY + rect.height > window.innerHeight - edgePadding) {
+      nextY = y - rect.height - cursorOffset;
+    }
+
+    // Keep the toast inside the top and left viewport edges.
+    nextX = Math.max(edgePadding, nextX);
+
+    nextY = Math.max(edgePadding, nextY);
+
+    setPosition({
+      x: nextX,
+      y: nextY,
+    });
+  }, [x, y, message]);
 
   useEffect(() => {
     // Start fading out after the display duration.
@@ -33,18 +76,19 @@ export default function Toast({
 
     return () => {
       window.clearTimeout(fadeTimer);
+
       window.clearTimeout(closeTimer);
     };
   }, [duration, onClose]);
 
   return (
     <div
-      // Display the toast next to the given cursor position.
+      ref={toastRef}
       style={{
-        left: x,
-        top: y,
+        left: position.x,
+        top: position.y,
       }}
-      className={`pointer-events-none fixed z-50 ml-3 mt-3 whitespace-nowrap rounded-lg bg-black px-4 py-2 text-sm text-white transition-opacity duration-400 ${
+      className={`pointer-events-none fixed z-50 whitespace-nowrap rounded-lg bg-black px-4 py-2 text-sm text-white transition-opacity duration-400 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >
