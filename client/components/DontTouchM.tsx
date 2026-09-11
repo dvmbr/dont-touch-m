@@ -1,21 +1,25 @@
 "use client";
 
 import {
-  forwardRef,
   useCallback,
   useImperativeHandle,
   useRef,
   useState,
   type MouseEvent,
+  type Ref,
 } from "react";
 import Toast from "@/client/components/Toast";
 
+type EscapePointer = { x: number; y: number };
+
 export type DontTouchMHandle = {
   element: HTMLSpanElement | null;
+  escape: (pointer?: EscapePointer) => void;
   showWarning: (message: string, x: number, y: number) => void;
 };
 
 type DontTouchMProps = {
+  ref?: Ref<DontTouchMHandle>;
   message?: string;
   getClickMessage?: (event: MouseEvent<HTMLSpanElement>) => string;
   onClick?: (event: MouseEvent<HTMLSpanElement>) => void;
@@ -28,119 +32,147 @@ type ToastState = {
   y: number;
 };
 
-const DontTouchM = forwardRef<DontTouchMHandle, DontTouchMProps>(
-  function DontTouchM(
-    { message = "Don't touch M!", getClickMessage, onClick },
-    forwardedRef,
-  ) {
-    // Reference to the actual M element.
-    const mRef = useRef<HTMLSpanElement>(null);
+export default function DontTouchM({
+  ref,
+  message = "Don't touch M!",
+  getClickMessage,
+  onClick,
+}: DontTouchMProps) {
+  const mRef = useRef<HTMLSpanElement>(null);
 
-    // Current warning displayed by M.
-    const [toast, setToast] = useState<ToastState | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
-    // A new ID forces Toast to restart its fade-out timer.
-    const toastIdRef = useRef(0);
+  const toastIdRef = useRef(0);
 
-    const closeToast = useCallback(() => {
-      setToast(null);
-    }, []);
+  const closeToast = useCallback(() => {
+    setToast(null);
+  }, []);
 
-    const showWarning = useCallback(
-      (warningMessage: string, x: number, y: number) => {
-        // Every event creates a fresh Toast lifecycle.
-        toastIdRef.current += 1;
+  const showWarning = useCallback(
+    (warningMessage: string, x: number, y: number) => {
+      toastIdRef.current += 1;
 
-        setToast({
-          id: toastIdRef.current,
-          message: warningMessage,
-          x,
-          y,
-        });
+      setToast({
+        id: toastIdRef.current,
+        message: warningMessage,
+        x,
+        y,
+      });
+    },
+    [],
+  );
+
+  const escape = useCallback((pointer?: EscapePointer) => {
+    const m = mRef.current;
+    if (!m) return;
+
+    const rect = m.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const paddingX = Math.min(
+      20,
+      Math.max(0, (viewportWidth - rect.width) / 2),
+    );
+    const paddingY = Math.min(
+      20,
+      Math.max(0, (viewportHeight - rect.height) / 2),
+    );
+    const maxX = Math.max(paddingX, viewportWidth - rect.width - paddingX);
+    const maxY = Math.max(paddingY, viewportHeight - rect.height - paddingY);
+    let x = paddingX + Math.random() * (maxX - paddingX);
+    let y = paddingY + Math.random() * (maxY - paddingY);
+
+    if (
+      pointer &&
+      pointer.x >= x &&
+      pointer.x <= x + rect.width &&
+      pointer.y >= y &&
+      pointer.y <= y + rect.height
+    ) {
+      x = pointer.x < viewportWidth / 2 ? maxX : paddingX;
+      y = pointer.y < viewportHeight / 2 ? maxY : paddingY;
+    }
+
+    m.style.position = "fixed";
+    m.style.left = `${x}px`;
+    m.style.top = `${y}px`;
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get element() {
+        return mRef.current;
       },
-      [],
-    );
+      showWarning,
+      escape,
+    }),
+    [showWarning, escape],
+  );
 
-    // Allow each challenge to access M and trigger its warning.
-    useImperativeHandle(
-      forwardedRef,
-      () => ({
-        get element() {
-          return mRef.current;
-        },
-        showWarning,
-      }),
-      [showWarning],
-    );
+  const handleClick = (event: MouseEvent<HTMLSpanElement>) => {
+    const m = mRef.current;
 
-    const handleClick = (event: MouseEvent<HTMLSpanElement>) => {
-      const m = mRef.current;
-
-      // Make M react briefly when touched.
-
-      if (m) {
-        m.animate(
-          [
-            {
-              transform: "scale(1) rotate(0deg)",
-            },
-
-            {
-              transform: "scale(0.92) rotate(-3deg)",
-            },
-
-            {
-              transform: "scale(1.06) rotate(2deg)",
-            },
-
-            {
-              transform: "scale(1) rotate(0deg)",
-            },
-          ],
+    if (m) {
+      m.animate(
+        [
+          {
+            transform: "scale(1) rotate(0deg)",
+          },
 
           {
-            duration: 260,
-
-            easing: "ease-out",
+            transform: "scale(0.92) rotate(-3deg)",
           },
-        );
-      }
 
-      const clickMessage = getClickMessage?.(event) ?? message;
+          {
+            transform: "scale(1.06) rotate(2deg)",
+          },
 
-      showWarning(
-        clickMessage,
+          {
+            transform: "scale(1) rotate(0deg)",
+          },
+        ],
 
-        event.clientX,
+        {
+          duration: 260,
 
-        event.clientY,
+          easing: "ease-out",
+        },
       );
+    }
 
-      onClick?.(event);
-    };
+    const clickMessage = getClickMessage?.(event) ?? message;
 
-    return (
-      <>
-        <span
-          ref={mRef}
-          onClick={handleClick}
-          className="inline-block cursor-pointer select-none text-[12rem] font-black leading-none transition-transform duration-150 ease-out"
-        >
-          M
-        </span>
+    showWarning(
+      clickMessage,
 
-        {toast && (
-          <Toast
-            key={toast.id}
-            message={toast.message}
-            x={toast.x}
-            y={toast.y}
-            onClose={closeToast}
-          />
-        )}
-      </>
+      event.clientX,
+
+      event.clientY,
     );
-  },
-);
 
-export default DontTouchM;
+    onClick?.(event);
+  };
+
+  return (
+    <>
+      <span
+        ref={mRef}
+        onClick={handleClick}
+        className="inline-block cursor-pointer select-none text-[12rem] font-black leading-none transition-transform duration-150 ease-out"
+      >
+        M
+      </span>
+
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          x={toast.x}
+          y={toast.y}
+          onClose={closeToast}
+        />
+      )}
+    </>
+  );
+}

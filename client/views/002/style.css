@@ -1,4 +1,3 @@
-/* Make the document scrollbar easier to notice only on challenge #002. */
 html.dont-scroll-active::-webkit-scrollbar {
   width: 40px;
 }

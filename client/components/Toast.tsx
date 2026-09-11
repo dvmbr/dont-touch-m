@@ -17,13 +17,10 @@ export default function Toast({
   duration = 700,
   onClose,
 }: ToastProps) {
-  // Reference used to measure the rendered toast.
   const toastRef = useRef<HTMLDivElement>(null);
 
-  // Controls the fade-out animation.
   const [visible, setVisible] = useState(true);
 
-  // Final position after keeping the toast inside the viewport.
   const [position, setPosition] = useState({
     x,
     y,
@@ -42,17 +39,14 @@ export default function Toast({
     let nextX = x + cursorOffset;
     let nextY = y + cursorOffset;
 
-    // Flip the toast to the left when it would overflow right.
     if (nextX + rect.width > window.innerWidth - edgePadding) {
       nextX = x - rect.width - cursorOffset;
     }
 
-    // Flip the toast upward when it would overflow bottom.
     if (nextY + rect.height > window.innerHeight - edgePadding) {
       nextY = y - rect.height - cursorOffset;
     }
 
-    // Keep the toast inside the top and left viewport edges.
     nextX = Math.max(edgePadding, nextX);
 
     nextY = Math.max(edgePadding, nextY);
@@ -64,12 +58,10 @@ export default function Toast({
   }, [x, y, message]);
 
   useEffect(() => {
-    // Start fading out after the display duration.
     const fadeTimer = window.setTimeout(() => {
       setVisible(false);
     }, duration);
 
-    // Remove the toast after the fade-out animation finishes.
     const closeTimer = window.setTimeout(() => {
       onClose();
     }, duration + 400);

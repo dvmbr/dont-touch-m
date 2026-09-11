@@ -8,66 +8,65 @@ import DontTouchM, {
 } from "@/client/components/DontTouchM";
 
 export default function DontScroll() {
-  // Reference to the shared M component.
   const mRef = useRef<DontTouchMHandle>(null);
 
-  // Reference to the lower message.
   const surpriseRef = useRef<HTMLParagraphElement>(null);
 
-  // Prevent bounce animations from stacking.
-  const bounceActiveRef = useRef(false);
-
-  // Prevent the surprise sequence from running multiple times at once.
   const surpriseActiveRef = useRef(false);
 
   useEffect(() => {
+    let blockedUntil = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.clientX !== pointerX || event.clientY !== pointerY) {
+        blockedUntil = 0;
+      }
+    };
+
     const handleWheel = (event: WheelEvent) => {
-      // Ignore wheel events over the browser scrollbar area.
-
-      const scrollbarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
-
-      const isOverScrollbar =
-        event.clientX >= window.innerWidth - scrollbarWidth;
-
-      if (isOverScrollbar) return;
-
-      // Block the actual page scroll.
-
-      event.preventDefault();
-
       const m = mRef.current?.element;
 
-      // Make M bounce slightly whenever scrolling is attempted.
-      if (m && !bounceActiveRef.current) {
-        bounceActiveRef.current = true;
+      if (!m) return;
 
-        m.style.transform = "translateY(-16px)";
+      const rect = m.getBoundingClientRect();
+      const isOverM =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+      const continuesBlockedGesture =
+        Date.now() < blockedUntil &&
+        event.clientX === pointerX &&
+        event.clientY === pointerY;
 
-        window.setTimeout(() => {
-          m.style.transform = "translateY(0)";
-        }, 120);
+      if (!isOverM && !continuesBlockedGesture) return;
 
-        window.setTimeout(() => {
-          bounceActiveRef.current = false;
-        }, 240);
-      }
+      event.preventDefault();
+      blockedUntil = Date.now() + 200;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
 
-      // Every wheel event refreshes the warning timer.
       mRef.current?.showWarning(
         "Don't scroll M!",
         event.clientX,
         event.clientY,
       );
+
+      if (!isOverM) return;
+
+      mRef.current?.escape({ x: event.clientX, y: event.clientY });
     };
 
-    // passive: false is required to prevent wheel scrolling.
     window.addEventListener("wheel", handleWheel, {
       passive: false,
     });
+    window.addEventListener("pointermove", handlePointerMove);
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("pointermove", handlePointerMove);
     };
   }, []);
 
@@ -86,7 +85,6 @@ export default function DontScroll() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Wait until the lower message becomes clearly visible.
         if (!entry.isIntersecting || entry.intersectionRatio < 0.5) {
           return;
         }
@@ -97,7 +95,6 @@ export default function DontScroll() {
 
         surpriseActiveRef.current = true;
 
-        // React when the user somehow reaches the lower message.
         surprise.animate(
           [
             {
@@ -116,14 +113,12 @@ export default function DontScroll() {
           },
         );
 
-        // Use the same shared warning system.
         mRef.current?.showWarning(
           "Wait... how did you get down here?!",
           window.innerWidth / 2,
           window.innerHeight / 2,
         );
 
-        // Send the user back to M after the surprise.
         window.setTimeout(() => {
           window.scrollTo({
             top: 0,
@@ -131,7 +126,6 @@ export default function DontScroll() {
           });
         }, 650);
 
-        // Allow the sequence again after returning to the top.
         window.setTimeout(() => {
           surpriseActiveRef.current = false;
         }, 1400);
@@ -158,7 +152,6 @@ export default function DontScroll() {
         </h1>
       </section>
 
-      {/* Reaching this message means the user somehow got past M. */}
       <section className="flex h-screen items-center justify-center">
         <p ref={surpriseRef} className="text-2xl font-bold">
           You should be able to scroll here.
