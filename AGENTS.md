@@ -33,8 +33,11 @@
 
 - Wheel/trackpad input over M blocks scrolling, shows the `Don't scroll M!` warning, and makes M escape to a random viewport position.
 - A wheel gesture started over M stays blocked after M escapes until the gesture pauses or the pointer moves; new gestures outside M scroll normally.
-- Scrolling through the document scrollbar remains allowed.
-- Keep the document/window as the scroll owner. Do not replace it with an inner scrolling container.
+- Show the warning and move M only once per blocked wheel gesture. Momentum events only extend the scroll block.
+- Scrolling through the challenge scrollbar remains allowed.
+- The shared Main provides a bounded, positioned content area while preserving its background and padding. Each challenge owns its scrolling behavior.
+- Keep challenge #002 scroll styles in its CSS Module. Do not style shared ancestors or toggle global page classes for scrolling.
+- Observe the lower message and return to the top within the challenge #002 scroll container.
 - The enlarged scrollbar is intentional.
 - Reaching the lower message triggers the surprise behavior and returns the user to the top.
 - M escapes on scrolling over M, not on clicks or pointer proximity.

@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "The Unclickable Button",
 };
 
+/**
+ * Server component for demonstrating the "Unclickable Button" feature.
+ */
 export default function Page001() {
   return <UnclickableButton />;
 }

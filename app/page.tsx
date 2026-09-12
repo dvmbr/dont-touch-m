@@ -1,8 +1,7 @@
+/**
+ * Server component for the home page which is hidden.
+ * It may be used in the future for specific purposes.
+ */
 export default function Home() {
-  return (
-    <main>
-      <h1>dontTouchM</h1>
-      <p>Don't touch M.</p>
-    </main>
-  );
+  return <section>Home page</section>;
 }

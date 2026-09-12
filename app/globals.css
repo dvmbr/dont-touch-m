@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg: #f3f3f3;
+  --color-fg: #505050;
+  --color-mu: #707070;
+  --color-bo: #d9d9d9;
+  --color-ho: #e7e7e7;
+  --color-sf: #e5e5e5;
+}
+
+/* Provide default and dark theme colors */
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #292929;
+      --color-fg: #d4d4d4;
+      --color-mu: #a3a3a3;
+      --color-bo: #474747;
+      --color-ho: #3d3d3d;
+      --color-sf: #333333;
+    }
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+  }
+}
